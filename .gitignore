@@ -1,0 +1,25 @@
+# JavaScript project dependencies
+node_modules
+
+# Golang project
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+*.out
+*.coverprofile
+
+# misc
+.DS_Store
+.env
+.idea
+*.exe
+*.test
+*.prof
+*.log
