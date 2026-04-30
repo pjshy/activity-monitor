@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixel Process Monitor</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero panel">
+        <div>
+          <p class="eyebrow">macOS Process Monitor</p>
+          <h1>像素风进程监控</h1>
+          <p class="subtitle">轻量后端本地采样，低内存前端渲染，快速查看 CPU、内存和进程状态。</p>
+        </div>
+        <div class="toolbar" aria-label="操作栏">
+          <label class="search">
+            <span>搜索</span>
+            <input id="searchInput" type="search" placeholder="PID / 用户 / 命令" autocomplete="off" />
+          </label>
+          <button id="refreshButton" type="button">刷新</button>
+        </div>
+      </section>
+
+      <section class="stats" aria-label="系统摘要">
+        <article class="stat-card panel">
+          <span>CPU</span>
+          <strong id="cpuValue">--</strong>
+          <meter id="cpuMeter" min="0" max="100" value="0"></meter>
+        </article>
+        <article class="stat-card panel">
+          <span>内存</span>
+          <strong id="memoryValue">--</strong>
+          <meter id="memoryMeter" min="0" max="100" value="0"></meter>
+        </article>
+        <article class="stat-card panel">
+          <span>进程</span>
+          <strong id="processCount">--</strong>
+          <small id="sampledAt">等待采样</small>
+        </article>
+        <article class="stat-card panel">
+          <span>负载</span>
+          <strong id="loadAverage">--</strong>
+          <small id="osName">--</small>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-head">
+          <div>
+            <h2>进程列表</h2>
+            <p id="resultMeta">正在加载...</p>
+          </div>
+          <div class="sort-info">点击表头排序</div>
+        </div>
+        <div id="errorBox" class="error" hidden></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-sort="pid">PID</th>
+                <th data-sort="user">用户</th>
+                <th data-sort="cpu">CPU</th>
+                <th data-sort="memory">内存</th>
+                <th data-sort="rssKb">RSS</th>
+                <th data-sort="state">状态</th>
+                <th data-sort="command">命令</th>
+              </tr>
+            </thead>
+            <tbody id="processTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
