@@ -7,20 +7,23 @@ const state = {
 };
 
 const elements = {
-  status: document.querySelector('#status'),
   processCount: document.querySelector('#processCount'),
-  cpuUsage: document.querySelector('#cpuUsage'),
-  memoryUsage: document.querySelector('#memoryUsage'),
+  cpuValue: document.querySelector('#cpuValue'),
+  cpuMeter: document.querySelector('#cpuMeter'),
+  memoryValue: document.querySelector('#memoryValue'),
+  memoryMeter: document.querySelector('#memoryMeter'),
   loadAverage: document.querySelector('#loadAverage'),
   sampledAt: document.querySelector('#sampledAt'),
-  processRows: document.querySelector('#processRows'),
+  osName: document.querySelector('#osName'),
+  resultMeta: document.querySelector('#resultMeta'),
+  errorBox: document.querySelector('#errorBox'),
+  processTable: document.querySelector('#processTable'),
   searchInput: document.querySelector('#searchInput'),
   refreshButton: document.querySelector('#refreshButton'),
   sortButtons: document.querySelectorAll('[data-sort]'),
 };
 
 async function loadProcesses() {
-  setStatus('SYNCING');
   try {
     const response = await fetch('/api/processes', { cache: 'no-store' });
     if (!response.ok) {
@@ -30,14 +33,11 @@ async function loadProcesses() {
     const snapshot = await response.json();
     state.summary = snapshot.summary;
     state.processes = snapshot.processes ?? [];
-    render(snapshot.error);
+    render(snapshot.error || '');
   } catch (error) {
-    setStatus('OFFLINE');
-    elements.processRows.innerHTML = `
-      <tr>
-        <td colspan="7" class="empty">Unable to load process data: ${escapeHtml(error.message)}</td>
-      </tr>
-    `;
+    state.summary = null;
+    state.processes = [];
+    render(`Unable to load process data: ${error.message}`);
   }
 }
 
@@ -49,21 +49,36 @@ function render(error) {
 
 function renderSummary(error) {
   const summary = state.summary ?? {};
-  setStatus(error ? 'DEGRADED' : 'LIVE');
+  const cpu = Number(summary.cpu) || 0;
+  const memoryUsed = Number(summary.memoryUsed) || 0;
+
   elements.processCount.textContent = formatNumber(summary.processCount);
-  elements.cpuUsage.textContent = `${formatNumber(summary.cpu, 1)}%`;
-  elements.memoryUsage.textContent = `${formatNumber(summary.memoryUsed, 1)}%`;
+  elements.cpuValue.textContent = `${formatNumber(cpu, 1)}%`;
+  elements.cpuMeter.value = clampPercent(cpu);
+  elements.memoryValue.textContent = `${formatNumber(memoryUsed, 1)}%`;
+  elements.memoryMeter.value = clampPercent(memoryUsed);
   elements.loadAverage.textContent = summary.loadAverage || 'n/a';
+  elements.osName.textContent = summary.os || '--';
   elements.sampledAt.textContent = summary.sampledAt
-    ? `Sampled ${new Date(summary.sampledAt).toLocaleTimeString()}`
-    : 'Waiting for first sample';
+    ? `采样时间 ${new Date(summary.sampledAt).toLocaleTimeString()}`
+    : '等待采样';
+
+  if (error) {
+    elements.errorBox.hidden = false;
+    elements.errorBox.textContent = error;
+  } else {
+    elements.errorBox.hidden = true;
+    elements.errorBox.textContent = '';
+  }
 }
 
 function renderTable() {
-  const rows = filteredProcesses().slice(0, 250);
+  const filtered = filteredProcesses();
+  const rows = filtered.slice(0, 250);
+  elements.resultMeta.textContent = `显示 ${rows.length} / ${filtered.length} 条，采样总数 ${state.processes.length}`;
 
   if (rows.length === 0) {
-    elements.processRows.innerHTML = `
+    elements.processTable.innerHTML = `
       <tr>
         <td colspan="7" class="empty">No processes match this filter.</td>
       </tr>
@@ -71,15 +86,15 @@ function renderTable() {
     return;
   }
 
-  elements.processRows.innerHTML = rows.map((process) => `
+  elements.processTable.innerHTML = rows.map((process) => `
     <tr>
       <td class="numeric">${process.pid}</td>
       <td>${escapeHtml(process.user)}</td>
-      <td>${escapeHtml(shortCommand(process))}</td>
       <td class="numeric hot">${formatNumber(process.cpu, 1)}%</td>
       <td class="numeric">${formatNumber(process.memory, 1)}%</td>
       <td class="numeric">${formatBytes((process.rssKb ?? 0) * 1024)}</td>
       <td>${escapeHtml(process.state || '-')}</td>
+      <td title="${escapeHtml(process.args || process.command || '')}">${escapeHtml(shortCommand(process))}</td>
     </tr>
   `).join('');
 }
@@ -114,22 +129,25 @@ function compare(a, b, key) {
 
 function updateSortButtons() {
   elements.sortButtons.forEach((button) => {
+    const label = button.dataset.label || button.textContent.trim();
+    button.dataset.label = label;
+
     const active = button.dataset.sort === state.sortKey;
     button.classList.toggle('active', active);
     button.textContent = active
-      ? `${button.dataset.label} ${state.sortDirection === 'asc' ? '↑' : '↓'}`
-      : button.dataset.label;
+      ? `${label} ${state.sortDirection === 'asc' ? '↑' : '↓'}`
+      : label;
   });
-}
-
-function setStatus(value) {
-  elements.status.textContent = value;
 }
 
 function shortCommand(process) {
   const source = process.args || process.command || '';
   const segments = source.split('/');
   return segments[segments.length - 1] || source;
+}
+
+function clampPercent(value) {
+  return Math.max(0, Math.min(100, value));
 }
 
 function formatBytes(bytes) {
